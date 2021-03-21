@@ -5,7 +5,12 @@ import torch.nn as nn
 import torchvision
 
 from invnet import BaseInvNet
-from layers import DPLayer
+
+try:
+    from layers import DPLayer
+except:
+    import os
+    raise Exception('Python path:',os.environ['PYTHONPATH'])
 from microstructure import MicrostructureDataset
 
 

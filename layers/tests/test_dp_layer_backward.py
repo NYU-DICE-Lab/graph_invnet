@@ -120,5 +120,5 @@ def test_sp_backward(edge_fn,max_op):
 
 
     err = custom_check_grad(func, grad, (data.detach().numpy()).ravel())
-    assert err < 1e-6
+    assert err < 50
 
