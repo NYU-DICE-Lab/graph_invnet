@@ -16,7 +16,7 @@ import torch
 from scipy.optimize import approx_fprime
 from torchvision import transforms, datasets
 
-from microstructure.utils import MicrostructureDataset
+from microstructure import utils
 
 
 _epsilon = np.sqrt(np.finfo(float).eps)
@@ -24,7 +24,7 @@ PARAMS=[('diff_squared',0),('sum_squared',0),('diff_squared',1),('sum_squared',1
 PARAMS=[('diff_squared',1)]
 def make_data():
     dir = '/data/datasets/two_phase_morph/morph_global_64_train_255.h5'
-    dataset = MicrostructureDataset(dir)
+    dataset = utils.MicrostructureDataset(dir)
 
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
     data=next(iter(train_loader))
