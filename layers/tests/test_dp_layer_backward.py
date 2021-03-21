@@ -16,7 +16,11 @@ import torch
 from scipy.optimize import approx_fprime
 from torchvision import transforms, datasets
 
-from microstructure import utils
+try:
+    from microstructure import utils
+except:
+    raise Exception('path_together:',path_together)
+
 
 
 _epsilon = np.sqrt(np.finfo(float).eps)
