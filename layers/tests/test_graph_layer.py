@@ -1,9 +1,14 @@
+import os
+import sys
+
 import numpy as np
 import torch
 from scipy.optimize import check_grad
 
-from ..dp_layer.edge_functions import sum_squared
-from ..graph_layer import GraphLayer
+sys.path.append(os.path.realpath(os.path.dirname(__file__)+"/.."))
+
+from layers.dp_layer.edge_functions import sum_squared
+from layers.graph_layer import GraphLayer
 
 
 def make_data():

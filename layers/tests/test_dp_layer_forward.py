@@ -1,6 +1,10 @@
+import os
+import sys
+
 import torch
 
-from ..dp_layer.DPLayer import DPLayer
+sys.path.append(os.path.realpath(os.path.dirname(__file__)+"/.."))
+from layers.dp_layer.DPLayer import DPLayer
 
 
 def make_data():

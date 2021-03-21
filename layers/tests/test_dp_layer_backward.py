@@ -1,3 +1,6 @@
+import os
+import sys
+
 import numpy as np
 import pytest
 import torch
@@ -5,7 +8,9 @@ from scipy.optimize import approx_fprime
 from torchvision import transforms, datasets
 
 from microstructure import utils
-from ..dp_layer.DPLayer import DPLayer
+
+sys.path.append(os.path.realpath(os.path.dirname(__file__)+"/.."))
+from layers.dp_layer.DPLayer import DPLayer
 
 _epsilon = np.sqrt(np.finfo(float).eps)
 PARAMS=[('diff_squared',0),('sum_squared',0),('diff_squared',1),('sum_squared',1)]
