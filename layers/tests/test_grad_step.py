@@ -5,8 +5,11 @@ import pytest
 import torch
 from torchvision import transforms, datasets
 
-sys.path.append(os.path.realpath(os.path.dirname(__file__)+"/.."))
-
+path=os.path.realpath(os.path.dirname(__file__))
+path_split=path.split('/')
+path_limited=path_split[:-2]
+path_together=''.join('/'+x for x in path_limited)
+sys.path.append(path_together)
 from layers.dp_layer.DPLayer import DPLayer
 
 

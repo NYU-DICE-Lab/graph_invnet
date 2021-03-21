@@ -5,7 +5,12 @@ import numpy as np
 import torch
 from scipy.optimize import check_grad
 
-sys.path.append(os.path.realpath(os.path.dirname(__file__)+"/.."))
+path=os.path.realpath(os.path.dirname(__file__))
+path_split=path.split('/')
+path_limited=path_split[:-2]
+path_together=''.join('/'+x for x in path_limited)
+sys.path.append(path_together)
+
 
 from layers.dp_layer.edge_functions import sum_squared
 from layers.graph_layer import GraphLayer
