@@ -89,15 +89,15 @@ def custom_check_grad(func, grad, x0, *args, **kwargs):
         raise ValueError("Unknown keyword arguments: %r" %
                          (list(kwargs.keys()),))
 
+    approx_grad = grad(x0, *args)
     true_grad= approx_fprime(x0, func, step, *args)
-    approx_grad=grad(x0, *args)
     return np.sqrt(sum((true_grad-
                      approx_grad)**2))
 
 @pytest.mark.parametrize("edge_fn,max_op",PARAMS)
 def test_sp_backward(edge_fn,max_op):
     device = "cuda:0"
-    torch.cuda.set_device(device)
+    torch.cuda.set_device(0)
 
     data = make_mnist_data()
     dp_layer=DPLayer(edge_fn,max_op,32,32,True)
