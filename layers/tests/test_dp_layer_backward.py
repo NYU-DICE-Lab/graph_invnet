@@ -1,5 +1,7 @@
 import os
 import sys
+sys.path.append(os.path.realpath(os.path.dirname(__file__)+"/.."))
+from layers.dp_layer.DPLayer import DPLayer
 
 import numpy as np
 import pytest
@@ -9,8 +11,6 @@ from torchvision import transforms, datasets
 
 from microstructure import utils
 
-sys.path.append(os.path.realpath(os.path.dirname(__file__)+"/.."))
-from layers.dp_layer.DPLayer import DPLayer
 
 _epsilon = np.sqrt(np.finfo(float).eps)
 PARAMS=[('diff_squared',0),('sum_squared',0),('diff_squared',1),('sum_squared',1)]
