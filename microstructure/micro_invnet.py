@@ -16,11 +16,11 @@ from microstructure import MicrostructureDataset
 class InvNet(BaseInvNet):
 
     def __init__(self,batch_size,output_path,data_dir,lr,critic_iters,\
-                 proj_iters,hidden_size,device,lambda_gp,edge_fn,max_op,restore_mode=False):
+                 proj_iters,hidden_size,device,lambda_gp,edge_fn,max_op,proj_lambda,restore_mode=False):
 
         self.DPLayer=DPLayer(edge_fn,max_op,64,64,make_pos=False)
         self.max_i,self.max_j=64,64
-        super().__init__(batch_size,output_path,data_dir,lr,critic_iters,proj_iters,64**2,hidden_size,device,lambda_gp,1,restore_mode)
+        super().__init__(batch_size,output_path,data_dir,lr,critic_iters,proj_iters,64**2,hidden_size,device,lambda_gp,1,proj_lambda,restore_mode=restore_mode)
 
         print(self.proj_iters)
         self.edge_fn=edge_fn

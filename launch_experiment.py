@@ -15,5 +15,5 @@ if __name__=="__main__":
 
     invnet = InvNet(config.batch_size, config.output_path, config.data_dir,
                          config.lr, config.critic_iter, config.proj_iter,
-                         config.hidden_size, device, config.lambda_gp, config.edge_fn, config.max_op)
+                         config.hidden_size, device, config.lambda_gp, config.edge_fn, config.max_op,config.proj_lambda)
     invnet.train(config.end_iter)

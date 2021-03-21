@@ -1,3 +1,4 @@
+import math
 import os
 import time
 from abc import ABC, abstractmethod
@@ -12,8 +13,25 @@ from models.wgan import *
 
 
 class BaseInvNet(ABC):
+    '''An abstract class implementing functionality that is common to all InvNet classes. This class
+    doesn't specify any particular data source or data type as this is left to inheriting classes.
 
-    def __init__(self, batch_size, output_path, data_dir, lr, critic_iters, proj_iters, output_dim, hidden_size, device, lambda_gp,ctrl_dim,restore_mode=False,hparams={}):
+    Arguments:
+            batch_size (int): size of training batches
+            output_path (str): the location to save trained models
+            data_dir (str): location of training data
+            lr (float): learning rate for all models
+            critic_iters (int): number of updates performed for the critic in each training iteration
+            proj_iters (int): number of updates performed for the critic in each training iteration
+            output_dim (int): dimension of generator output (same as size of each datapoint)
+            hidden_size (int): depth of largest hidden layers in generator and critic
+            device (str): name of device to do training on
+
+
+
+
+    '''
+    def __init__(self, batch_size, output_path, data_dir, lr, critic_iters, proj_iters, output_dim, hidden_size, device, lambda_gp,ctrl_dim,proj_lambda=1,restore_mode=False,hparams={}):
         self.writer = SummaryWriter()
         print('output dir:', self.writer.logdir)
         self.device = device
@@ -30,10 +48,12 @@ class BaseInvNet(ABC):
         self.train_loader, self.val_loader = self.load_data()
         self.dataiter, self.val_iter = iter(self.train_loader), iter(self.val_loader)
 
+        self.proj_lambda=proj_lambda
         self.critic_iters = critic_iters
         self.proj_iters = proj_iters
         hparams.update({'proj_iters': self.proj_iters,
-                      'critic_iters': self.critic_iters})
+                      'critic_iters': self.critic_iters,
+                      'proj_lambda': self.proj_lambda})
         self.hparams=hparams
 
 
@@ -152,7 +172,7 @@ class BaseInvNet(ABC):
         return stats
 
     def proj_update(self):
-        if not self.proj_iters:
+        if not (self.proj_lambda and self.proj_iters):
             return 0
         start=timer()
         real_data = self.sample()
@@ -165,13 +185,12 @@ class BaseInvNet(ABC):
             noise=self.gen_rand_noise(self.batch_size).to(self.device)
             noise.requires_grad=True
             fake_data = self.G(noise, real_lengths).view((self.batch_size,self.max_i,self.max_j))
-            pj_loss=self.proj_loss(fake_data,real_lengths)
+            pj_loss=self.proj_lambda*self.proj_loss(fake_data,real_lengths)
             pj_loss.backward()
             total_pj_loss+=pj_loss.cpu()
             self.optim_pj.step()
 
         end=timer()
-        # print('--projection update elapsed time:',end-start)
         return total_pj_loss/self.proj_iters
 
     def validation(self):
