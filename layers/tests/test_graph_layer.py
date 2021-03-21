@@ -2,8 +2,8 @@ import numpy as np
 import torch
 from scipy.optimize import check_grad
 
-from layers.dp_layer.edge_functions import sum_squared
-from layers.graph_layer import GraphLayer
+from ..dp_layer.edge_functions import sum_squared
+from ..graph_layer import GraphLayer
 
 
 def make_data():
