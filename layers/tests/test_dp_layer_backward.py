@@ -2,7 +2,7 @@ import os
 import sys
 path=os.path.realpath(os.path.dirname(__file__))
 path_split=path.split('/')
-path_limited=path_split[:-2]
+path_limited=path_split[:-3]
 path_together=''.join('/'+x for x in path_limited)
 sys.path.append(path_together)
 from layers.dp_layer.DPLayer import DPLayer
