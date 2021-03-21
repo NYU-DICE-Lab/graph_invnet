@@ -1,5 +1,4 @@
 import math
-import sys
 
 import torch
 import torch.nn.functional as F
@@ -8,26 +7,24 @@ from torchvision import transforms, datasets
 
 from invnet import BaseInvNet
 from layers.dp_layer.DPLayer import DPLayer
-from mnist.config import *
 
 
 class InvNet(BaseInvNet):
 
     def __init__(self,batch_size,output_path,data_dir,lr,critic_iters,\
-                 proj_iters,hidden_size,device,lambda_gp,edge_fn,max_op,max_i=32,max_j=32,restore_mode=False):
+                 proj_iters,hidden_size,device,lambda_gp,edge_fn,max_op,proj_lambda,restore_mode=False):
 
-        self.max_i,self.max_j=max_i,max_j
         self.max_op=max_op
         make_pos=True
         if edge_fn=='diff_exp':
             make_pos=False
-        self.dp_layer=DPLayer(edge_fn,max_op,max_i,max_j,make_pos=make_pos)
+        self.dp_layer=DPLayer(edge_fn,max_op,32,32,make_pos=make_pos)
         new_hparams = {'max_op': str(max_op), 'edge_fn': edge_fn}
-        super().__init__(batch_size,output_path,data_dir,lr,critic_iters,proj_iters,max_i*max_j,hidden_size,device,lambda_gp,1,restore_mode,hparams=new_hparams)
+        super().__init__(batch_size,output_path,data_dir,lr,critic_iters,proj_iters,32**2,hidden_size,device,lambda_gp,1,proj_lambda,restore_mode=restore_mode,hparams=new_hparams)
 
     def proj_loss(self,fake_data,real_lengths):
         #TODO Experiment with normalization
-        fake_data = fake_data.view((self.batch_size, self.max_i, self.max_j))
+        fake_data = fake_data.view((self.batch_size, 32, 32))
         real_lengths=real_lengths.view((-1,1))
 
         fake_lengths=self.real_p1(fake_data)
@@ -44,7 +41,7 @@ class InvNet(BaseInvNet):
 
     def load_data(self):
         data_transform = transforms.Compose([
-            transforms.Resize(self.max_i),
+            transforms.Resize(32),
             # transforms.CenterCrop(64),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.1307], std=[0.3801])
@@ -99,21 +96,3 @@ class InvNet(BaseInvNet):
         metric_dict = {'generator_cost': stats['gen_cost'],
                        'discriminator_cost': dev_disc_cost ,'validation_projection_error': dev_proj_err}
         self.writer.add_hparams(self.hparams, metric_dict,global_step=stats['iteration'])
-
-if __name__=='__main__':
-    config=Config()
-
-
-    cuda_available = torch.cuda.is_available()
-    device = torch.device(config.gpu if cuda_available else "cpu")
-    device="cuda:0"
-    if cuda_available:
-        torch.cuda.set_device(device)
-    print('training on:',device)
-    sys.stdout.flush()
-
-    invnet=InvNet(config.batch_size, config.output_path, config.data_dir,
-                  config.lr, config.critic_iter, config.proj_iter,
-                  config.hidden_size, device, config.lambda_gp, config.edge_fn, config.max_op)
-    invnet.train(10000)
-    #TODO fix proj_loss reporting
