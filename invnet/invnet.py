@@ -69,8 +69,8 @@ class GraphInvNet:
         self.optim_pj = torch.optim.Adam(self.G.parameters(), lr=lr, betas=(0, 0.9))
 
         self.fixed_noise = self.gen_rand_noise(4)
-        self.p1_mean, self.p1_std = None,None
-        self.p1_mean, self.p1_std = self.get_p1_stats()
+        self.attr_mean, self.attr_std = None,None
+        self.attr_mean, self.attr_std = self.get_attr_stats()
 
         self.disc_cost=[]
         self.val_proj_err=[]
@@ -82,7 +82,7 @@ class GraphInvNet:
 
         for iteration in range(iters):
 
-            gen_cost, real_p1 = self.generator_update()
+            gen_cost, real_attr = self.generator_update()
             start_time = time.time()
             proj_cost = self.proj_update()
             stats = self.critic_update()
@@ -107,8 +107,8 @@ class GraphInvNet:
         real_data= self.sample()
         real_images=real_data.to(self.device)
         with torch.no_grad():
-            real_lengths=self.real_p1(real_images)
-        real_p1=real_lengths.to(self.device)
+            real_lengths=self.real_attr(real_images)
+        real_attr=real_lengths.to(self.device)
         mone = torch.FloatTensor([1]) * -1
         mone=mone.to(self.device)
 
@@ -116,7 +116,7 @@ class GraphInvNet:
             self.G.zero_grad()
             noise = self.gen_rand_noise(self.batch_size).to(self.device)
             noise.requires_grad_(True)
-            fake_data = self.G(noise, real_p1).view((-1,self.max_i,self.max_j))
+            fake_data = self.G(noise, real_attr).view((-1,self.max_i,self.max_j))
             gen_cost = self.D(fake_data)
             gen_cost = gen_cost.mean()
             gen_cost = gen_cost.view((1))
@@ -127,7 +127,7 @@ class GraphInvNet:
 
         end=timer()
         # print('--generator update elapsed time:',end-start)
-        return gen_cost, real_p1
+        return gen_cost, real_attr
 
     def critic_update(self):
         for p in self.D.parameters():  # reset requires_grad
@@ -140,9 +140,9 @@ class GraphInvNet:
             noise = self.gen_rand_noise(self.batch_size).to(self.device)
             with torch.no_grad():
                 noisev = noise  # totally freeze G, training D
-                real_lengths= self.real_p1(real_images)
-                real_p1 = real_lengths.to(self.device)
-            fake_data = self.G(noisev, real_p1).detach()
+                real_lengths= self.real_attr(real_images)
+                real_attr = real_lengths.to(self.device)
+            fake_data = self.G(noisev, real_attr).detach()
             # train with real data
             disc_real = self.D(real_images)
             disc_real = disc_real.mean()
@@ -169,8 +169,8 @@ class GraphInvNet:
                'disc_real':disc_real,
                'disc_fake':disc_fake,
                'gradient_penalty':gradient_penalty,
-               'real_p1_avg':real_p1.mean(),
-                'real_p1_std':real_p1.std()}
+               'real_attr_avg':real_attr.mean(),
+                'real_attr_std':real_attr.std()}
         return stats
 
     def proj_update(self):
@@ -181,7 +181,7 @@ class GraphInvNet:
         total_pj_loss=torch.tensor([0.])
         with torch.no_grad():
             images = real_data.to(self.device)
-            real_lengths = self.real_p1(images).view(-1, 1)
+            real_lengths = self.real_attr(images).view(-1, 1)
         for iteration in range(self.proj_iters):
             self.G.zero_grad()
             noise=self.gen_rand_noise(self.batch_size).to(self.device)
@@ -207,7 +207,7 @@ class GraphInvNet:
             imgs = imgs.to(self.device).squeeze()
             with torch.no_grad():
                 imgs_v = imgs
-                real_lengths = self.real_p1(imgs_v)
+                real_lengths = self.real_attr(imgs_v)
                 noise = self.gen_rand_noise(real_lengths.shape[0]).to(self.device)
                 fake_data = self.G(noise, real_lengths.to(self.device)).detach()
                 _proj_err = self.proj_loss(fake_data, real_lengths).detach()
@@ -242,11 +242,11 @@ class GraphInvNet:
         self.writer.add_image('fake_collage', fake_2, stats['iteration'])
 
         #Generating images for tensorboard display
-        mean,std=self.p1_mean,self.p1_std
+        mean,std=self.attr_mean,self.attr_std
         lv=torch.tensor([mean-std,mean,mean+std,mean+2*std]).view(-1,1).float().to(self.device)
         with torch.no_grad():
             noisev=self.fixed_noise
-            lv_v=self.normalize_p1(lv)
+            lv_v=self.normalize_attr(lv)
         noisev=noisev.float()
         gen_images=self.G(noisev,lv_v).view((4,-1,size,size))
         gen_images = self.norm_data(gen_images).unsqueeze(1)
@@ -298,18 +298,18 @@ class GraphInvNet:
                 real_data = self.sample(train=False)
         return real_data.squeeze()
 
-    def get_p1_stats(self):
-        p1_values=[]
+    def get_attr_stats(self):
+        attr_values=[]
         for _ in range(10):
             batch=self.sample()
             with torch.no_grad():
-                p1=self.real_p1(batch)
-            p1_values+=list(p1)
-        values=np.array(p1_values)
+                attr=self.real_attr(batch)
+            attr_values+=list(attr)
+        values=np.array(attr_values)
         return values.mean(),values.std()
 
-    def normalize_p1(self,p1):
-        return (p1-self.p1_mean)/self.p1_std
+    def normalize_attr(self,attr):
+        return (attr-self.attr_mean)/self.attr_std
 
     #TODO check that this loss F.mse_loss is giving expected output
     def proj_loss(self,fake_data,real_lengths):
@@ -317,7 +317,7 @@ class GraphInvNet:
         fake_data = fake_data.view((self.batch_size, self.max_i, self.max_j))
         real_lengths=real_lengths.view((-1,1))
 
-        fake_lengths=self.real_p1(fake_data)
+        fake_lengths=self.real_attr(fake_data)
         proj_loss=F.mse_loss(fake_lengths,real_lengths)
         return proj_loss
 
@@ -344,11 +344,11 @@ class GraphInvNet:
         test_loader = torch.utils.data.DataLoader(val_data, batch_size=self.batch_size, shuffle=True)
         return train_loader,test_loader
 
-    def real_p1(self,images):
+    def real_attr(self,images):
         images=images.view((-1,self.max_i,self.max_j))
         real_lengths=self.dp_layer(images).view(-1,1)
-        if self.p1_mean is not None:
-            real_lengths=self.normalize_p1(real_lengths)
+        if self.attr_mean is not None:
+            real_lengths=self.normalize_attr(real_lengths)
         return real_lengths
 
     def norm_data(self, data):
