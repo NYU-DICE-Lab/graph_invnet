@@ -9,7 +9,7 @@ import torchvision
 from tensorboardX import SummaryWriter
 from torchvision import transforms, datasets
 
-from dp_layer import DPLayer
+from dp_layer import DPLayer, P1Layer
 from invnet.utils import calc_gradient_penalty, \
     weights_init, MicrostructureDataset
 from models.wgan import *
@@ -18,13 +18,13 @@ from models.wgan import *
 class GraphInvNet:
 
     def __init__(self, batch_size, output_path, data_dir, lr, critic_iters, proj_iters, max_i,max_j,\
-                 hidden_size, device, lambda_gp,ctrl_dim,edge_fn,max_op,make_pos,proj_lambda,restore_mode=False):
+                 hidden_size, device, lambda_gp,edge_fn,max_op,make_pos,proj_lambda,restore_mode=False):
 
         #create output path and summary write
         if 'mnist' in data_dir.lower():
             self.dataset = 'mnist'
         elif 'morph' in data_dir.lower():
-            self.dataset = 'micro'
+            self.dataset = 'morph'
         else:
             raise Exception('Unknown dataset')
         now = datetime.now()
@@ -53,13 +53,16 @@ class GraphInvNet:
         self.proj_iters = proj_iters
 
         self.dp_layer = DPLayer(edge_fn, max_op, self.max_i,self.max_j , make_pos=make_pos)
+        self.p1_layer = P1Layer()
+
+        self.attr_layers= [self.dp_layer,self.p1_layer]
         self.proj_lambda = proj_lambda
 
         if restore_mode:
             self.D = torch.load(output_path + "generator.pt").to(device)
             self.G = torch.load(output_path + "discriminator.pt").to(device)
         else:
-            self.G = GoodGenerator(hidden_size, self.max_i*self.max_j, ctrl_dim=ctrl_dim).to(device)
+            self.G = GoodGenerator(hidden_size, self.max_i*self.max_j, ctrl_dim=len(self.attr_layers)).to(device)
             self.D = GoodDiscriminator(dim=hidden_size).to(device)
         self.G.apply(weights_init)
         self.D.apply(weights_init)
@@ -233,7 +236,6 @@ class GraphInvNet:
         self.gen_cost.append(float(stats['gen_cost'].detach().cpu().item()))
 
     def save(self,stats):
-        #TODO split this into base saving actions and MNIST/DP specific saving stuff
         size = self.max_i
         fake_2 = stats['fake_data'].view(self.batch_size, -1, size, size)
         fake_2 = fake_2.int()
@@ -273,7 +275,6 @@ class GraphInvNet:
         noise = noise.to(self.device)
         return noise
 
-
     def sample(self,train=True):
         if train:
             try:
@@ -305,8 +306,8 @@ class GraphInvNet:
             with torch.no_grad():
                 attr=self.real_attr(batch)
             attr_values+=list(attr)
-        values=np.array(attr_values)
-        return values.mean(),values.std()
+        values=torch.stack(attr_values)
+        return values.mean(dim=0).to(self.device),values.std(dim=0).to(self.device)
 
     def normalize_attr(self,attr):
         return (attr-self.attr_mean)/self.attr_std
@@ -331,7 +332,6 @@ class GraphInvNet:
         elif self.dataset=='mnist':
             data_transform = transforms.Compose([
                 transforms.Resize(self.max_i),
-                # transforms.CenterCrop(64),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.1307], std=[0.3801])
             ])
@@ -346,10 +346,14 @@ class GraphInvNet:
 
     def real_attr(self,images):
         images=images.view((-1,self.max_i,self.max_j))
-        real_lengths=self.dp_layer(images).view(-1,1)
+        real_attrs=[]
+        for layer in self.attr_layers:
+            attr=layer(images).view(-1,1)
+            real_attrs.append(attr)
+        real_attrs=torch.cat(real_attrs,dim=1)
         if self.attr_mean is not None:
-            real_lengths=self.normalize_attr(real_lengths)
-        return real_lengths
+            real_attrs=self.normalize_attr(real_attrs)
+        return real_attrs
 
     def norm_data(self, data):
         data = data.view(-1, self.max_i, self.max_j)

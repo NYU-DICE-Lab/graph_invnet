@@ -23,3 +23,11 @@ class DPLayer(nn.Module):
         thetas = self.graph_layer(images)
         fake_lengths = dp_function(thetas, self.adj_array, self.rev_adj,self.max_op,self.null)
         return fake_lengths
+
+class P1Layer(nn.Module):
+    def __init__(self):
+        super(P1Layer, self).__init__()
+
+    def forward(self,x):
+        assert len(x.shape)==3
+        return x.mean(dim=(1,2))
