@@ -184,7 +184,7 @@ class GraphInvNet:
         total_pj_loss=torch.tensor([0.])
         with torch.no_grad():
             images = real_data.to(self.device)
-            real_lengths = self.real_attr(images).view(-1, 1)
+            real_lengths = self.real_attr(images).view(-1, len(self.attr_layers))
         for iteration in range(self.proj_iters):
             self.G.zero_grad()
             noise=self.gen_rand_noise(self.batch_size).to(self.device)
@@ -245,7 +245,7 @@ class GraphInvNet:
 
         #Generating images for tensorboard display
         mean,std=self.attr_mean,self.attr_std
-        lv=torch.tensor([mean-std,mean,mean+std,mean+2*std]).view(-1,1).float().to(self.device)
+        lv=torch.stack([mean-std,mean,mean+std,mean+2*std]).view(-1,len(self.attr_layers)).float().to(self.device)
         with torch.no_grad():
             noisev=self.fixed_noise
             lv_v=self.normalize_attr(lv)
@@ -316,7 +316,7 @@ class GraphInvNet:
     def proj_loss(self,fake_data,real_lengths):
         #TODO Experiment with normalization
         fake_data = fake_data.view((self.batch_size, self.max_i, self.max_j))
-        real_lengths=real_lengths.view((-1,1))
+        real_lengths=real_lengths.view((-1,len(self.attr_layers)))
 
         fake_lengths=self.real_attr(fake_data)
         proj_loss=F.mse_loss(fake_lengths,real_lengths)
