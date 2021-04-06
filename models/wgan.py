@@ -184,7 +184,7 @@ class GoodGenerator(nn.Module):
         self.rb3 = ResidualBlock(4 * self.dim, 2 * self.dim, 3, resample='up',hw=output_dim)
         self.bn = nn.BatchNorm2d(2*self.dim)
 
-        self.conv1 = MyConvo2d(2 * self.dim, ctrl_dim, 3)  # THIS NEEDS TO BE CHANGED TO NUM CATEGORY
+        self.conv1 = MyConvo2d(2 * self.dim, 1, 3)  # THIS NEEDS TO BE CHANGED TO NUM CATEGORY
         self.relu = nn.ReLU()
         if output_dim>1:
             self.softmax=nn.Softmax2d()
