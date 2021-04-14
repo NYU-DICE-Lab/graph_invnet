@@ -18,8 +18,8 @@ from models.wgan import *
 class GraphInvNet:
 
     def __init__(self, batch_size, output_path, data_dir, lr, critic_iters, proj_iters, max_i,max_j,\
-                 hidden_size, device, lambda_gp,edge_fn,max_op,make_pos,proj_lambda,restore_mode=False):
-
+                 hidden_size, device, lambda_gp,edge_fn,max_op,make_pos,proj_lambda,include_dp=True,restore_mode=False):
+        print('dp:',include_dp)
         #create output path and summary write
         if 'mnist' in data_dir.lower():
             self.dataset = 'mnist'
@@ -30,6 +30,8 @@ class GraphInvNet:
         now = datetime.now()
         hparams = '_%s_pl:%s' % (self.dataset, str(proj_lambda))
         self.output_path = './runs/' + now.strftime('%m-%d:%H:%M') + hparams
+        if not include_dp:
+            self.output_path+='no_dp'
         print('output path:',self.output_path)
         self.writer = SummaryWriter(self.output_path)
         self.device = device
@@ -55,7 +57,10 @@ class GraphInvNet:
         self.dp_layer = DPLayer(edge_fn, max_op, self.max_i,self.max_j , make_pos=make_pos)
         self.p1_layer = P1Layer()
 
-        self.attr_layers= [self.dp_layer,self.p1_layer]
+        if include_dp:
+            self.attr_layers= [self.dp_layer,self.p1_layer]
+        else:
+            self.attr_layers = [self.p1_layer]
         self.proj_lambda = proj_lambda
 
         if restore_mode:
@@ -231,7 +236,7 @@ class GraphInvNet:
         self.writer.add_scalar('data/gradient_pen', stats['gradient_penalty'], stats['iteration'])
         self.writer.add_scalar('data/proj_error',stats['val_proj_err'],stats['iteration'])
 
-        self.disc_cost.append(float(stats['val_critic_err']))
+        self.disc_cost.append(float(stats['disc_cost']))
         self.val_proj_err.append(stats['val_proj_err'].cpu().item())
         self.gen_cost.append(float(stats['gen_cost'].detach().cpu().item()))
 
