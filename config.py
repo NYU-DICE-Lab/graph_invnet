@@ -36,6 +36,9 @@ class MNISTConfig(argparse.Namespace):
         parser.add_argument('--edge_fn', default='diff_exp')
         parser.add_argument('--make_pos', type=bool,default=True)
         parser.add_argument('--proj_lambda',type=float,default=1)
+        parser.add_argument('--top2bottom', dest='top2bottom', action='store_true')
+        parser.add_argument('--no-top2bottom', dest='top2bottom', action='store_false')
+        parser.set_defaults(top2bottom=False)
         return parser
 
     def __init__(self):
@@ -65,6 +68,10 @@ class MicroStructureConfig(argparse.Namespace):
         parser.add_argument('--edge_fn', choices=list(d.keys()),default='diff_exp')
         parser.add_argument('--make_pos', type=bool, default=False)
         parser.add_argument('--proj_lambda', type=float, default=1)
+        parser.add_argument('--top2bottom', dest='top2bottom', action='store_true')
+        parser.add_argument('--no-top2bottom', dest='top2bottom', action='store_false')
+        parser.set_defaults(top2bottom=False)
+
         return parser
 
     def __init__(self):

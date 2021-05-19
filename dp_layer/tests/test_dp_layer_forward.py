@@ -1,6 +1,6 @@
 import torch
 
-from layers import DPLayer
+from dp_layer import DPLayer
 
 
 def make_data():

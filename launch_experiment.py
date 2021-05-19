@@ -16,5 +16,5 @@ if __name__=="__main__":
     invnet = GraphInvNet(config.batch_size, config.output_path, config.data_dir,
                          config.lr, config.critic_iter, config.proj_iter, config.data_size, config.data_size,
                          config.hidden_size, device, config.lambda_gp,1, config.edge_fn, config.max_op,config.make_pos,
-                         config.proj_lambda)
+                         config.proj_lambda,config.top2bottom)
     invnet.train(config.end_iter)
