@@ -18,8 +18,7 @@ from models.wgan import *
 class GraphInvNet:
 
     def __init__(self, batch_size, output_path, data_dir, lr, critic_iters, proj_iters, max_i,max_j,\
-                 hidden_size, device, lambda_gp,edge_fn,max_op,make_pos,proj_lambda,include_dp=True,restore_mode=False):
-        print('dp:',include_dp)
+                 hidden_size, device, lambda_gp,ctrl_dim,edge_fn,max_op,make_pos,proj_lambda,include_dp=True,top2bottom=False,restore_mode=False):
         #create output path and summary write
         if 'mnist' in data_dir.lower():
             self.dataset = 'mnist'
@@ -32,6 +31,8 @@ class GraphInvNet:
         self.output_path = './runs/' + now.strftime('%m-%d:%H:%M') + hparams
         if not include_dp:
             self.output_path+='no_dp'
+        if top2bottom:
+            self.output_path+='_full'
         print('output path:',self.output_path)
         self.writer = SummaryWriter(self.output_path)
         self.device = device
@@ -54,7 +55,7 @@ class GraphInvNet:
         self.critic_iters = critic_iters
         self.proj_iters = proj_iters
 
-        self.dp_layer = DPLayer(edge_fn, max_op, self.max_i,self.max_j , make_pos=make_pos)
+        self.dp_layer = DPLayer(edge_fn, max_op, self.max_i,self.max_j , make_pos=make_pos,top2bottom=top2bottom)
         self.p1_layer = P1Layer()
 
         if include_dp:
@@ -135,7 +136,7 @@ class GraphInvNet:
 
         end=timer()
         # print('--generator update elapsed time:',end-start)
-        return gen_cost, real_attr
+        return gen_cost.detach(), real_p1.detach()
 
     def critic_update(self):
         for p in self.D.parameters():  # reset requires_grad
@@ -170,15 +171,20 @@ class GraphInvNet:
             self.optim_d.step()
         end = timer()
         # print('---train D elapsed time:', end - start)
-        stats={'w_dist': w_dist,
-               'disc_cost':disc_cost,
-               'fake_data':fake_data[:100],
+        stats={'w_dist': w_dist.detach(),
+               'disc_cost':disc_cost.detach(),
+               'fake_data':fake_data[:100].detach(),
                'real_data':real_images[:4],
                'disc_real':disc_real,
                'disc_fake':disc_fake,
                'gradient_penalty':gradient_penalty,
                'real_attr_avg':real_attr.mean(),
                 'real_attr_std':real_attr.std()}
+               'disc_real':disc_real.detach(),
+               'disc_fake':disc_fake.detach(),
+               'gradient_penalty':gradient_penalty.detach(),
+               'real_p1_avg':real_attr.mean().detach(),
+                'real_p1_std':real_attr.std().detach
         return stats
 
     def proj_update(self):
@@ -197,7 +203,7 @@ class GraphInvNet:
             fake_data = self.G(noise, real_lengths).view((self.batch_size,self.max_i,self.max_j))
             pj_loss=self.proj_lambda*self.proj_loss(fake_data,real_lengths)
             pj_loss.backward()
-            total_pj_loss+=pj_loss.cpu()
+            total_pj_loss+=pj_loss.cpu().detach()
             self.optim_pj.step()
 
         end=timer()
