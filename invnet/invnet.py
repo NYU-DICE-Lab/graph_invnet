@@ -136,7 +136,7 @@ class GraphInvNet:
 
         end=timer()
         # print('--generator update elapsed time:',end-start)
-        return gen_cost.detach(), real_p1.detach()
+        return gen_cost.detach(), real_attr.detach()
 
     def critic_update(self):
         for p in self.D.parameters():  # reset requires_grad
@@ -174,17 +174,12 @@ class GraphInvNet:
         stats={'w_dist': w_dist.detach(),
                'disc_cost':disc_cost.detach(),
                'fake_data':fake_data[:100].detach(),
-               'real_data':real_images[:4],
-               'disc_real':disc_real,
-               'disc_fake':disc_fake,
-               'gradient_penalty':gradient_penalty,
-               'real_attr_avg':real_attr.mean(),
-                'real_attr_std':real_attr.std()}
+               'real_data':real_images[:4].detach(),
                'disc_real':disc_real.detach(),
                'disc_fake':disc_fake.detach(),
                'gradient_penalty':gradient_penalty.detach(),
-               'real_p1_avg':real_attr.mean().detach(),
-                'real_p1_std':real_attr.std().detach
+               'real_attr_avg':real_attr.mean().detach(),
+                'real_attr_std':real_attr.std().detach()}
         return stats
 
     def proj_update(self):
@@ -192,7 +187,7 @@ class GraphInvNet:
             return 0
         start=timer()
         real_data = self.sample()
-        total_pj_loss=torch.tensor([0.])
+        total_pj_loss=torch.tensor([0.],requires_grad=False)
         with torch.no_grad():
             images = real_data.to(self.device)
             real_lengths = self.real_attr(images).view(-1, len(self.attr_layers))
